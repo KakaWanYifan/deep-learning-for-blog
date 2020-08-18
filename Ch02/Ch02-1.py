@@ -31,13 +31,13 @@ def train_epoch(epoch):
             # 计算输出
             out = model(x)
             # 计算损失
-            loss = tf.reduce_sum(tf.square(out - y)) / x.shape[0]
+            loss = tf.reduce_mean(tf.square(out - y))
+
+        print(epoch, step, loss.numpy())
 
         # 梯度优化
         grads = tape.gradient(loss, model.trainable_variables)
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
-
-        print(epoch, step, loss.numpy())
 
 
 for epoch in range(10):

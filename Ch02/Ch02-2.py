@@ -11,7 +11,7 @@ ys = tf.one_hot(ys, depth=10)
 train_dataset = tf.data.Dataset.from_tensor_slices((xs, ys)).batch(200)
 
 # 定义模型
-
+# 必须是tf.Variable，后面求导要用
 w1 = tf.Variable(tf.random.truncated_normal([784, 512], stddev=0.1))
 b1 = tf.Variable(tf.zeros([512]))
 w2 = tf.Variable(tf.random.truncated_normal([512, 256], stddev=0.1))
@@ -45,6 +45,7 @@ def train_epoch(epoch):
         grads = tape.gradient(loss, [w1, b1, w2, b2, w3, b3])
         # print(grads)
         # w1 = w1 - lr * w1_grad
+        # 原地更新
         w1.assign_sub(lr * grads[0])
         b1.assign_sub(lr * grads[1])
         w2.assign_sub(lr * grads[2])

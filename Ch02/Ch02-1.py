@@ -3,6 +3,7 @@ from tensorflow import keras
 from tensorflow.keras import datasets, layers, optimizers
 
 # 准备数据
+# 返回是 (x_train, y_train), (x_test, y_test)
 (xs, ys), _ = datasets.mnist.load_data()
 
 xs = tf.convert_to_tensor(xs, dtype=tf.float32) / 255.0

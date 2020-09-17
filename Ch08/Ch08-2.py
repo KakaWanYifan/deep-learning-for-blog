@@ -62,7 +62,6 @@ class BasicBlock(layers.Layer):
 
 class ResNet(keras.Model):
 
-    # [2,2,2,2]
     def __init__(self,layer_dims,num_class=100):
         """
 
@@ -141,7 +140,6 @@ if __name__ == '__main__':
     # 减少数据量，这要耗费时间少。毕竟只是demo
     x_train = x_train[:10000]
     y_train = y_train[:10000]
-
     x_test = x_test[:2000]
     y_test = y_test[:2000]
 

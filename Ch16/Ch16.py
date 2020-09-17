@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.datasets import mnist
-from tensorflow.keras import Sequential, layers, optimizers, losses
+from tensorflow.keras import Sequential, layers, optimizers, losses, metrics
 
 (x_train, y_train), (x_test, y_test) = mnist.load_data()
 x_train = tf.expand_dims(x_train, axis=3)
@@ -45,6 +45,21 @@ print(loss, accuracy)
 result = network.predict(x_test)[0:25]
 pred = tf.argmax(result, axis=1)
 print(pred)
+
+print('\n' * 3)
+
+# 测量器
+# 创建准确率测量器
+acc_meter = metrics.Accuracy()
+result = network.predict(x_test)
+pred = tf.argmax(result, axis=1)
+for item, y in zip(pred, y_test):
+    acc_meter.update_state(y, item.numpy())
+
+# 读取统计结果
+print('Evaluate Acc:', acc_meter.result().numpy())
+# 清零测量器
+acc_meter.reset_states()
 
 print('\n' * 3)
 

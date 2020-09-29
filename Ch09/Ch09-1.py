@@ -6,6 +6,7 @@ from tensorflow.keras import layers
 tf.random.set_seed(1)
 np.random.seed(1)
 
+
 class RNN(keras.Model):
 
     def __init__(self, units):
@@ -89,6 +90,9 @@ if __name__ == '__main__':
     model.compile(optimizer=keras.optimizers.Adam(0.001), loss=tf.losses.BinaryCrossentropy(), metrics=['accuracy'],
                   experimental_run_tf_function=False)
     model.fit(db_train, epochs=epochs, validation_data=db_test)
+
+    for var in model.trainable_variables:
+        print(var.name, var.shape)
 
     print('evaluate:')
     model.evaluate(db_test)

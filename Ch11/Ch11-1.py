@@ -1,7 +1,6 @@
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
-from PIL import Image
 from tensorflow.keras import Model, Sequential, layers, datasets
 
 

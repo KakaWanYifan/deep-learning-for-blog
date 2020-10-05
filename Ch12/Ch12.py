@@ -8,6 +8,7 @@ from tensorflow.keras import Model, layers, losses
 tf.random.set_seed(1)
 np.random.seed(1)
 
+
 # 生成器
 class Generator(Model):
 
@@ -115,13 +116,15 @@ def d_loss_fn(generator, discriminator, batch_z, batch_x, is_training):
 
     return loss
 
+
 def paintImg(images):
     for i in range(25):
         plt.subplot(5, 5, i + 1)
-        x = images[i] * 255.0
+        x = (images[i] + 1.0) * 127.5
         x = tf.cast(x=x, dtype=tf.int32)
         plt.imshow(x)
     plt.show()
+
 
 if __name__ == '__main__':
 
@@ -171,4 +174,3 @@ if __name__ == '__main__':
             z = tf.random.uniform([25, 100])
             fake_image = generator(z, training=False)
             paintImg(fake_image)
-

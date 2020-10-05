@@ -7,23 +7,22 @@ tf.random.set_seed(1)
 np.random.seed(1)
 
 
-class RNN(keras.Model):
+class LSTM(keras.Model):
 
     def __init__(self, units):
-        super(RNN, self).__init__()
+        super(LSTM, self).__init__()
 
         # [b, 64]
-        self.state0 = [tf.zeros([batch_size, units])]
-        self.state1 = [tf.zeros([batch_size, units])]
+        self.state0 = [tf.zeros([batch_size, units]), tf.zeros([batch_size, units])]
+        self.state1 = [tf.zeros([batch_size, units]), tf.zeros([batch_size, units])]
 
         # transform text to embedding representation
         # [b, 100] => [b, 100, 150]
         self.embedding = layers.Embedding(input_dim=total_words, output_dim=embedding_len, input_length=max_review_len)
 
-        # SimpleRNNCell
         # units=64
-        self.rnn_cell0 = layers.SimpleRNNCell(units, dropout=0.5)
-        self.rnn_cell1 = layers.SimpleRNNCell(units, dropout=0.5)
+        self.rnn_cell0 = layers.LSTMCell(units, dropout=0.5)
+        self.rnn_cell1 = layers.LSTMCell(units, dropout=0.5)
 
         # 全连接层
         # [b, 100, 150] => [b, 64] => [b, 1]
@@ -86,7 +85,7 @@ if __name__ == '__main__':
     units = 64
     epochs = 4
 
-    model = RNN(units)
+    model = LSTM(units)
     model.compile(optimizer=keras.optimizers.Adam(0.001), loss=tf.losses.BinaryCrossentropy(), metrics=['accuracy'],
                   experimental_run_tf_function=False)
     model.fit(db_train, epochs=epochs, validation_data=db_test)

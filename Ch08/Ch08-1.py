@@ -1,119 +1,98 @@
 import tensorflow as tf
-from tensorflow.keras import layers, Sequential, datasets, optimizers
+import numpy as np
+from tensorflow import keras
+from tensorflow.keras import layers
 
-conv_pool_layers = [
-
-    # 第一个单元
-    layers.Conv2D(filters=64, kernel_size=[3, 3], padding='same', activation=tf.nn.relu),
-    layers.Conv2D(filters=64, kernel_size=[3, 3], padding='same', activation=tf.nn.relu),
-    layers.MaxPooling2D(pool_size=[2, 2], strides=2, padding='same'),
-
-    # 第二个单元
-    layers.Conv2D(filters=128, kernel_size=[3, 3], padding='same', activation=tf.nn.relu),
-    layers.Conv2D(filters=128, kernel_size=[3, 3], padding='same', activation=tf.nn.relu),
-    layers.MaxPooling2D(pool_size=[2, 2], strides=2, padding='same'),
-
-    # 第三个单元
-    layers.Conv2D(filters=256, kernel_size=[3, 3], padding='same', activation=tf.nn.relu),
-    layers.Conv2D(filters=256, kernel_size=[3, 3], padding='same', activation=tf.nn.relu),
-    layers.MaxPooling2D(pool_size=[2, 2], strides=2, padding='same'),
-
-    # 第四个单元
-    layers.Conv2D(filters=512, kernel_size=[3, 3], padding='same', activation=tf.nn.relu),
-    layers.Conv2D(filters=512, kernel_size=[3, 3], padding='same', activation=tf.nn.relu),
-    layers.MaxPooling2D(pool_size=[2, 2], strides=2, padding='same'),
-
-    # 第五个单元
-    layers.Conv2D(filters=512, kernel_size=[3, 3], padding='same', activation=tf.nn.relu),
-    layers.Conv2D(filters=512, kernel_size=[3, 3], padding='same', activation=tf.nn.relu),
-    layers.MaxPooling2D(pool_size=[2, 2], strides=2, padding='same'),
-]
-
-conv_pool_net = Sequential(conv_pool_layers)
-conv_pool_net.build(input_shape=[None, 32, 32, 3]);
+tf.random.set_seed(1)
+np.random.seed(1)
 
 
-fc_layers = [
-    layers.Dense(units=512, activation=tf.nn.relu),
-    layers.Dense(units=256, activation=tf.nn.relu),
-    layers.Dense(units=100)
-]
-fc_net = Sequential(fc_layers)
-fc_net.build(input_shape=[None, 512])
+class RNN(keras.Model):
 
+    def __init__(self, units):
+        super(RNN, self).__init__()
 
-def preprocess(x, y):
-    """
+        # [b, 64]
+        self.state0 = [tf.zeros([batch_size, units])]
+        self.state1 = [tf.zeros([batch_size, units])]
 
-    :param x:
-    :param y:
-    :return:
-    """
-    x = tf.cast(x, dtype=tf.float32) / 255.0
-    y = tf.cast(y, dtype=tf.int32)
+        # transform text to embedding representation
+        # [b, 100] => [b, 100, 150]
+        self.embedding = layers.Embedding(input_dim=total_words, output_dim=embedding_len, input_length=max_review_len)
 
-    return x, y
+        # SimpleRNNCell
+        # units=64
+        self.rnn_cell0 = layers.SimpleRNNCell(units, dropout=0.5)
+        self.rnn_cell1 = layers.SimpleRNNCell(units, dropout=0.5)
+
+        # 全连接层
+        # [b, 100, 150] => [b, 64] => [b, 1]
+        self.out = layers.Dense(1)
+
+    def call(self, inputs, training=None):
+        """
+        net(x) net(x, training=True) :train mode
+        net(x, training=False): test
+        :param inputs: [b, 80]
+        :param training:
+        :return:
+        """
+        # [b, 100]
+        x = inputs
+        # embedding: [b, 100] => [b, 100, 150]
+        x = self.embedding(x)
+        # rnn cell compute
+        # [b, 100, 150] => [b, 64]
+        state0 = self.state0
+        state1 = self.state1
+        for word in tf.unstack(x, axis=1):
+            # word: [b, 150]
+            # h1 = x*wxh+h0*whh
+            # out0: [b, 64]
+            out0, state0 = self.rnn_cell0(word, state0, training)
+            # out1: [b, 64]
+            out1, state1 = self.rnn_cell1(out0, state1, training)
+
+        # out: [b, 64] => [b, 1]
+        x = self.out(out1)
+        # p(y is pos|x)
+        prob = tf.sigmoid(x)
+
+        return prob
 
 
 if __name__ == '__main__':
-    (x_train, y_train), (x_test, y_test) = datasets.cifar100.load_data()
+    # 批处理，批训练，发挥现代CPU和GPU的优势
+    batch_size = 128
 
-    # 把一个维度挤压掉
-    y_train = tf.squeeze(y_train, axis=1)
-    y_test = tf.squeeze(y_test, axis=1)
+    # 词汇表大小
+    total_words = 10000
 
-    print(x_train.shape, y_train.shape, x_test.shape, y_test.shape)
+    # 每个句子的最大长度
+    max_review_len = 100
+
+    # 每个词的表示向量的维度数
+    embedding_len = 150
+
+    (x_train, y_train), (x_test, y_test) = keras.datasets.imdb.load_data(num_words=total_words)
+    x_train = keras.preprocessing.sequence.pad_sequences(x_train, maxlen=max_review_len)
+    x_test = keras.preprocessing.sequence.pad_sequences(x_test, maxlen=max_review_len)
 
     db_train = tf.data.Dataset.from_tensor_slices((x_train, y_train))
-    db_train = db_train.shuffle(buffer_size=1000).map(preprocess).batch(200)
+    db_train = db_train.shuffle(1000).batch(batch_size, drop_remainder=True)
     db_test = tf.data.Dataset.from_tensor_slices((x_test, y_test))
-    db_test = db_test.map(preprocess).batch(200)
+    db_test = db_test.batch(batch_size, drop_remainder=True)
 
-    sample = next(iter(db_train))
-    print(sample[0].shape)
-    print(sample[1].shape)
+    units = 64
+    epochs = 4
 
-    optimizer = optimizers.Adam(learning_rate=0.0001)
-    variables = conv_pool_net.trainable_variables + fc_net.trainable_variables
+    model = RNN(units)
+    model.compile(optimizer=keras.optimizers.Adam(0.001), loss=tf.losses.BinaryCrossentropy(), metrics=['accuracy'],
+                  experimental_run_tf_function=False)
+    model.fit(db_train, epochs=epochs, validation_data=db_test)
 
-    epochs = 1
-    for epoch in range(epochs):
-        for step, (x, y) in enumerate(db_train):
-            with tf.GradientTape() as tape:
-                # [b,32,32,3] => [b,1,1,512]
-                out = conv_pool_net(x)
-                # [b,1,1,512] => [b,512]
-                out = tf.reshape(out, [-1, 512])
-                # [b,512] => [b,100]
-                logits = fc_net(out)
+    for var in model.trainable_variables:
+        print(var.name, var.shape)
 
-                # one hot
-                y_onehot = tf.one_hot(y, depth=100)
-
-                loss = tf.losses.categorical_crossentropy(y_onehot, logits, from_logits=True)
-                loss = tf.reduce_mean(loss)
-
-            grads = tape.gradient(loss, variables)
-            optimizer.apply_gradients(zip(grads, variables))
-
-            if step % 10 == 0:
-                print(epoch, step, 'loss: ', loss.numpy())
-
-    total_num = 0
-    total_correct = 0
-    for x, y in db_test:
-        out = conv_pool_net(x)
-        out = tf.reshape(out, [-1, 512])
-        logits = fc_net(out)
-        prob = tf.nn.softmax(logits, axis=1)
-        pred = tf.argmax(prob, axis=1)
-        pred = tf.cast(pred, tf.int32)
-        correct = tf.cast(tf.equal(pred, y), dtype=tf.int32)
-        correct = tf.reduce_sum(correct)
-        total_num = total_num + x.shape[0]
-        total_correct = total_correct + correct.numpy()
-
-    print(total_num)
-    print(total_correct)
-    acc = total_correct / total_num
-    print(acc)
+    print('evaluate:')
+    model.evaluate(db_test)

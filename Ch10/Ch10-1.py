@@ -1,97 +1,95 @@
 import tensorflow as tf
 import numpy as np
-from tensorflow import keras
-from tensorflow.keras import layers
-
-tf.random.set_seed(1)
-np.random.seed(1)
+import matplotlib.pyplot as plt
+from tensorflow.keras import Model, Sequential, layers, datasets
 
 
-class LSTM(keras.Model):
+class AE(Model):
+    # 包含了Encoder和Decoder
+    def __init__(self):
+        super(AE, self).__init__()
 
-    def __init__(self, units):
-        super(LSTM, self).__init__()
+        # 创建Encoders网络
+        self.encoder = Sequential([
+            layers.Dense(256, activation=tf.nn.relu),
+            layers.Dense(128, activation=tf.nn.relu),
+            layers.Dense(20)
+        ])
 
-        # [b, 64]
-        self.state0 = [tf.zeros([batch_size, units]), tf.zeros([batch_size, units])]
-        self.state1 = [tf.zeros([batch_size, units]), tf.zeros([batch_size, units])]
-
-        # transform text to embedding representation
-        # [b, 100] => [b, 100, 150]
-        self.embedding = layers.Embedding(input_dim=total_words, output_dim=embedding_len, input_length=max_review_len)
-
-        # units=64
-        self.rnn_cell0 = layers.LSTMCell(units, dropout=0.5)
-        self.rnn_cell1 = layers.LSTMCell(units, dropout=0.5)
-
-        # 全连接层
-        # [b, 100, 150] => [b, 64] => [b, 1]
-        self.out = layers.Dense(1)
+        # 创建Decoders网络
+        self.decoder = Sequential([
+            layers.Dense(128, activation=tf.nn.relu),
+            layers.Dense(256, activation=tf.nn.relu),
+            layers.Dense(784)
+        ])
 
     def call(self, inputs, training=None):
-        """
-        net(x) net(x, training=True) :train mode
-        net(x, training=False): test
-        :param inputs: [b, 80]
-        :param training:
-        :return:
-        """
-        # [b, 100]
-        x = inputs
-        # embedding: [b, 100] => [b, 100, 150]
-        x = self.embedding(x)
-        # rnn cell compute
-        # [b, 100, 150] => [b, 64]
-        state0 = self.state0
-        state1 = self.state1
-        for word in tf.unstack(x, axis=1):
-            # word: [b, 150]
-            # h1 = x*wxh+h0*whh
-            # out0: [b, 64]
-            out0, state0 = self.rnn_cell0(word, state0, training)
-            # out1: [b, 64]
-            out1, state1 = self.rnn_cell1(out0, state1, training)
+        # 前向传播函数
+        # 编码获得隐藏向量h,[b, 784] => [b, 20]
+        h = self.encoder(inputs)
+        # 解码获得重建图片，[b, 20] => [b, 784]
+        x_hat = self.decoder(h)
 
-        # out: [b, 64] => [b, 1]
-        x = self.out(out1)
-        # p(y is pos|x)
-        prob = tf.sigmoid(x)
+        return x_hat
 
-        return prob
+
+def printImage(images):
+    plt.figure(figsize=(10.0, 8.0))
+    for i in range(20):
+        plt.subplot(4, 5, i + 1)
+        plt.xticks([])
+        plt.yticks([])
+        plt.grid(False)
+        plt.imshow(images[i], cmap=plt.cm.binary)
+
+    plt.show()
 
 
 if __name__ == '__main__':
-    # 批处理，批训练，发挥现代CPU和GPU的优势
-    batch_size = 128
 
-    # 词汇表大小
-    total_words = 10000
+    (x_train, y_train), (x_test, y_test) = datasets.fashion_mnist.load_data()
+    x_train, x_test = x_train.astype(np.float32) / 255.0, x_test.astype(np.float32) / 255.0
+    # we do not need label
+    train_db = tf.data.Dataset.from_tensor_slices(x_train)
+    train_db = train_db.shuffle(128 * 5).batch(128)
+    test_db = tf.data.Dataset.from_tensor_slices(x_test)
+    test_db = test_db.batch(128)
 
-    # 每个句子的最大长度
-    max_review_len = 100
+    model = AE()
+    model.build(input_shape=(None, 784))
+    model.summary()
 
-    # 每个词的表示向量的维度数
-    embedding_len = 150
+    optimizer = tf.optimizers.Adam(lr=0.01)
 
-    (x_train, y_train), (x_test, y_test) = keras.datasets.imdb.load_data(num_words=total_words)
-    x_train = keras.preprocessing.sequence.pad_sequences(x_train, maxlen=max_review_len)
-    x_test = keras.preprocessing.sequence.pad_sequences(x_test, maxlen=max_review_len)
+    for epoch in range(5):
+        for step, x in enumerate(train_db):
+            # [b, 28, 28] => [b, 784]
+            x = tf.reshape(x, [-1, 784])
 
-    db_train = tf.data.Dataset.from_tensor_slices((x_train, y_train))
-    db_train = db_train.shuffle(1000).batch(batch_size, drop_remainder=True)
-    db_test = tf.data.Dataset.from_tensor_slices((x_test, y_test))
-    db_test = db_test.batch(batch_size, drop_remainder=True)
+            with tf.GradientTape() as tape:
+                x_rec_logits = model(x)
 
-    units = 64
-    epochs = 4
+                rec_loss = tf.losses.binary_crossentropy(x, x_rec_logits, from_logits=True)
+                rec_loss = tf.reduce_mean(rec_loss)
 
-    model = LSTM(units)
-    model.compile(optimizer=keras.optimizers.Adam(0.001), loss=tf.losses.BinaryCrossentropy(), metrics=['accuracy'],
-                  experimental_run_tf_function=False)
-    model.fit(db_train, epochs=epochs, validation_data=db_test)
+            grads = tape.gradient(rec_loss, model.trainable_variables)
+            optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
-    for var in model.trainable_variables:
-        print(var.name, var.shape)
+            if step % 100 == 0:
+                print(epoch, step, float(rec_loss))
 
-    print('evaluate:')
-    model.evaluate(db_test)
+    # evaluation
+    x = next(iter(test_db))
+    logits = model(tf.reshape(x, [-1, 784]))
+    x_hat = tf.sigmoid(logits)
+    # [b, 784] => [b, 28, 28]
+    x_hat = tf.reshape(x_hat, [-1, 28, 28])
+
+    # [b, 28, 28] => [2b, 28, 28]
+    # 输入的前 50 张+重建的前 50 张图片合并
+    x_concat = tf.concat([x[:10], x_hat[:10]], axis=0)
+    # 恢复为 0-255 的范围
+    x_concat = x_concat.numpy() * 255.
+    # 转换为整型
+    x_concat = x_concat.astype(np.uint8)
+    printImage(x_concat)

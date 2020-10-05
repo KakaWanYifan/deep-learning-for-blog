@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import glob
-import Ch12Util
+import Ch11Util
 import matplotlib.pyplot as plt
 from tensorflow.keras import Model, layers, losses
 
@@ -132,7 +132,7 @@ if __name__ == '__main__':
     z = tf.random.normal([2, 100])
     print(g(z).shape)
 
-    img_paths = glob.glob('./Ch12-Data/*.jpg')
+    img_paths = glob.glob('./Ch11-Data/*.jpg')
     print(len(img_paths))
 
     dataset, img_shape, len_dataset = Ch12Util.make_anime_dataset(img_paths=img_paths, batch_size=128, resize=64)

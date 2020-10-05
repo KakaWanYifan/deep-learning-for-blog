@@ -7,19 +7,19 @@ tf.random.set_seed(1)
 np.random.seed(1)
 
 
-class RNN(keras.Model):
+class LSTM(keras.Model):
 
     def __init__(self, units):
-        super(RNN, self).__init__()
+        super(LSTM, self).__init__()
 
         # transform text to embedding representation
         # [b, 80] => [b, 80, 100]
         self.embedding = layers.Embedding(total_words, embedding_len, input_length=max_review_len)
 
         # [b, 80, 100] , h_dim: 64
-        self.rnnlayer = keras.Sequential([
-            layers.SimpleRNN(units, dropout=0.5, return_sequences=True, unroll=True),
-            layers.SimpleRNN(units, dropout=0.5, unroll=True)
+        self.lstmlayer = keras.Sequential([
+            layers.LSTM(units, dropout=0.5, return_sequences=True, unroll=True),
+            layers.LSTM(units, dropout=0.5, unroll=True)
         ])
 
         # fc, [b, 80, 100] => [b, 64] => [b, 1]
@@ -39,7 +39,7 @@ class RNN(keras.Model):
         x = self.embedding(x)
         # rnn cell compute
         # x: [b, 100, 150] => [b, 64]
-        x = self.rnnlayer(x, training=training)
+        x = self.lstmlayer(x, training=training)
 
         # out: [b, 64] => [b, 1]
         x = self.outlayer(x)
@@ -72,7 +72,7 @@ if __name__ == '__main__':
     units = 64
     epochs = 4
 
-    model = RNN(units)
+    model = LSTM(units)
     # model.build(input_shape=(4,100))
     # model.summary()
     model.compile(optimizer=keras.optimizers.Adam(0.001), loss=tf.losses.BinaryCrossentropy(), metrics=['accuracy'])

@@ -165,7 +165,7 @@ if __name__ == '__main__':
         grads = tape.gradient(g_loss, generator.trainable_variables)
         g_optimizer.apply_gradients(zip(grads, generator.trainable_variables))
 
-        if epoch % 1000 == 0:
+        if epoch % 100 == 0:
             print(epoch, 'd-loss:', float(d_loss), 'g-loss:', float(g_loss))
 
             z = tf.random.uniform([25, 100])

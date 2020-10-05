@@ -145,8 +145,8 @@ if __name__ == '__main__':
     discriminator = Discriminator()
     discriminator.build(input_shape=(None, 64, 64, 3))
 
-    g_optimizer = tf.optimizers.Adam(learning_rate=0.001, beta_1=0.5)
-    d_optimizer = tf.optimizers.Adam(learning_rate=0.001, beta_1=0.5)
+    g_optimizer = tf.optimizers.Adam(learning_rate=0.002, beta_1=0.5)
+    d_optimizer = tf.optimizers.Adam(learning_rate=0.002, beta_1=0.5)
 
     for epoch in range(1000000):
 

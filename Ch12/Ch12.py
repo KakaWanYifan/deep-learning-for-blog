@@ -34,7 +34,7 @@ class Generator(Model):
         x = tf.nn.leaky_relu(self.bn1(self.conv1(x), training=training))
         x = tf.nn.leaky_relu(self.bn2(self.conv2(x), training=training))
         x = self.conv3(x)
-        x = tf.sigmoid(x)
+        x = tf.tanh(x)
 
         return x
 
@@ -125,6 +125,10 @@ def paintImg(images):
 
 if __name__ == '__main__':
 
+    g = Generator()
+    z = tf.random.normal([2, 100])
+    print(g(z).shape)
+
     img_paths = glob.glob('./Ch12-Data/*.jpg')
     print(len(img_paths))
 
@@ -146,7 +150,7 @@ if __name__ == '__main__':
 
     for epoch in range(1000000):
 
-        batch_z = tf.random.uniform([128, 100], minval=0.0, maxval=1.0)
+        batch_z = tf.random.uniform([128, 100], minval=-1.0, maxval=1.0)
         batch_x = next(db_iter)
 
         # 训练 D

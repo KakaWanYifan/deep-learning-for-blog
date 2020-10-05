@@ -8,7 +8,7 @@ def make_anime_dataset(img_paths, batch_size, resize, drop_remainder=True, shuff
     def _map_fn(img):
         img = tf.image.resize(img, [resize, resize])
         img = tf.clip_by_value(img, 0, 255)
-        img = img / 255.0
+        img = (img / 127.5) - 1
         return img
 
     dataset = disk_image_batch_dataset(img_paths,

@@ -9,7 +9,7 @@ N_STATES = 6
 # 有两个动作，要么左，要么右
 ACTIONS = ['left', 'right']
 # 0.9的情况下，按照Q表决定方向
-EPSILON = 0.9
+EPSILON = 1.0
 # 学习率
 ALPHA = 0.1
 # 眼光长远
@@ -87,17 +87,26 @@ def rl():
         update_env(S, episode, step_counter)
         while not is_terminated:
             A = choose_action(S, q_table)
+            print('选择：', A)
             # 采取动作，获得反馈
             S_, R = get_env_feedback(S, A)
+            print('反馈：', S_, R)
             q_predict = q_table.loc[S, A]
+            print('q_predict = q_table.loc[S, A]：')
+            print(q_table)
+            print(q_predict)
             if S_ != 'terminal':
                 q_target = R + GAMMA * q_table.iloc[S_, :].max()
+                print('S_ != terminal：', q_target)
             else:
                 q_target = R
+                print('terminal：', q_target)
                 is_terminated = True
 
             q_table.loc[S, A] += ALPHA * (q_target - q_predict)
+            print(q_table)
             S = S_
+            print('S = S_', S_, S)
 
             update_env(S, episode, step_counter + 1)
             step_counter += 1

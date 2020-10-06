@@ -135,7 +135,7 @@ if __name__ == '__main__':
     img_paths = glob.glob('./Ch11-Data/*.jpg')
     print(len(img_paths))
 
-    dataset, img_shape, len_dataset = Ch12Util.make_anime_dataset(img_paths=img_paths, batch_size=128, resize=64)
+    dataset, img_shape, len_dataset = Ch11Util.make_anime_dataset(img_paths=img_paths, batch_size=128, resize=64)
     print(dataset, img_shape, len_dataset)
     sample = next(iter(dataset))
     print(sample.shape)

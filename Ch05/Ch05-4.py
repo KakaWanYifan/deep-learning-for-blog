@@ -77,7 +77,7 @@ def dropout_demo():
     '''
 
     for n in range(3):
-        early_stopping = EarlyStopping(monitor='loss', min_delta=0, patience=patience, verbose=0, mode='auto',
+        early_stopping = EarlyStopping(monitor='loss', min_delta=0, verbose=0, mode='auto',
                                        baseline=None, restore_best_weights=False)
         model = Sequential()
         model.add(layers.Dense(16, input_dim=2, activation='relu'))

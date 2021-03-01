@@ -2,4 +2,4 @@
 
 > 深度学习初步及其Python实现 | Kaka Wan Yifan
 
-> https://kakawanyifan.com/10400/
+> https://kakawanyifan.com/10400.html
